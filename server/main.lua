@@ -10,7 +10,32 @@ AddEventHandler("SPZ:raceEnd", function(results)
 
     Log.info("Processing race progression for", #results.finishers, "finishers")
 
-    -- 1. Process Finishers
+    -- 1. Pre-process all racers for iRating (Field-wide calculation)
+    local allRacers = {}
+    for _, finisher in ipairs(results.finishers) do
+        local profile = exports["spz-identity"]:GetProfile(finisher.source)
+        table.insert(allRacers, {
+            source = finisher.source,
+            i_rating = profile and profile.i_rating or 1500,
+            position = finisher.position,
+            dnf = false
+        })
+    end
+    if results.dnf then
+        for _, dnf in ipairs(results.dnf) do
+            local profile = exports["spz-identity"]:GetProfile(dnf.source)
+            table.insert(allRacers, {
+                source = dnf.source,
+                i_rating = profile and profile.i_rating or 1500,
+                position = 999,
+                dnf = true
+            })
+        end
+    end
+
+    local iratingDeltas = exports["spz-progression"]:CalculateIRatingDeltas(allRacers)
+
+    -- 2. Process Finishers
     for _, finisher in ipairs(results.finishers) do
         local source = finisher.source
         local profile = exports["spz-identity"]:GetProfile(source)
@@ -40,15 +65,16 @@ AddEventHandler("SPZ:raceEnd", function(results)
             })
             local actualSrDelta = exports["spz-progression"]:ApplySR(source, srDelta)
 
+            -- iRating Application
+            local irDelta = iratingDeltas[source] or 0
+            local actualIrDelta = exports["spz-progression"]:ApplyIRating(source, irDelta)
+
             -- Bundled Profile Updates
-            -- Note: XP, Points, and SR are already updated via their respective modules. 
+            -- Note: XP, Points, SR, and iRating are already updated via their respective modules. 
             -- We update other stats like top3_count here.
             local profileUpdates = {
                 top3_count = (finisher.position <= 3) and (profile.top3_count + 1) or profile.top3_count
             }
-            
-            -- TODO Hooks:
-            -- local iRatingDelta = exports["spz-progression"]:CalculateIRatingDelta(source, results.finishers)
             
             exports["spz-identity"]:UpdateProfile(source, profileUpdates)
 
@@ -57,6 +83,7 @@ AddEventHandler("SPZ:raceEnd", function(results)
                 xpGain = xpGain,
                 pointsGain = pointsGain,
                 srDelta = actualSrDelta,
+                irDelta = actualIrDelta,
                 position = finisher.position
             })
         else
@@ -78,10 +105,15 @@ AddEventHandler("SPZ:raceEnd", function(results)
                 })
                 local actualSrDelta = exports["spz-progression"]:ApplySR(source, srDelta)
                 
+                -- iRating Application (DNF)
+                local irDelta = iratingDeltas[source] or 0
+                local actualIrDelta = exports["spz-progression"]:ApplyIRating(source, irDelta)
+
                 TriggerClientEvent("SPZ:progressionUpdate", source, {
                     xpGain = 0,
                     dnf = true,
-                    srDelta = actualSrDelta
+                    srDelta = actualSrDelta,
+                    irDelta = actualIrDelta
                 })
             end
         end

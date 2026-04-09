@@ -19,3 +19,9 @@ Config.SR = {
     dnf_disconnect = -0.50,   -- disconnect mid-race
     dnf_timeout    = -0.25,   -- race timeout, failed to finish
 }
+
+-- iRating (Skill Rating) System
+Config.IRating = {
+    KFactor = 32,
+    MinValue = 100,
+}
