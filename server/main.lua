@@ -57,6 +57,9 @@ AddEventHandler("SPZ:raceEnd", function(results)
             )
             exports["spz-progression"]:GrantPoints(source, pointsGain)
 
+            -- Record old rank for change detection
+            local oldRank = profile.rank
+
             -- SR Calculation & Application
             local srDelta = exports["spz-progression"]:CalculateSRDelta({
                 dnf = false,
@@ -69,9 +72,11 @@ AddEventHandler("SPZ:raceEnd", function(results)
             local irDelta = iratingDeltas[source] or 0
             local actualIrDelta = exports["spz-progression"]:ApplyIRating(source, irDelta)
 
-            -- Bundled Profile Updates
-            -- Note: XP, Points, SR, and iRating are already updated via their respective modules. 
-            -- We update other stats like top3_count here.
+            -- Rank Recalculation
+            local newRank, newRankName = exports["spz-progression"]:ComputeRank(profile.license_tier, profile.class_points)
+            exports["spz-progression"]:CheckRankUp(source, oldRank, newRank, newRankName)
+
+            -- Bundled Profile Updates (remaining stats)
             local profileUpdates = {
                 top3_count = (finisher.position <= 3) and (profile.top3_count + 1) or profile.top3_count
             }
