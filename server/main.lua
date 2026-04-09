@@ -76,6 +76,9 @@ AddEventHandler("SPZ:raceEnd", function(results)
             local newRank, newRankName = exports["spz-progression"]:ComputeRank(profile.license_tier, profile.class_points)
             exports["spz-progression"]:CheckRankUp(source, oldRank, newRank, newRankName)
 
+            -- License Promotion Check (All three gates)
+            exports["spz-progression"]:CheckPromotion(source)
+
             -- Bundled Profile Updates (remaining stats)
             local profileUpdates = {
                 top3_count = (finisher.position <= 3) and (profile.top3_count + 1) or profile.top3_count
