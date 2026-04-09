@@ -25,19 +25,24 @@ AddEventHandler("SPZ:raceEnd", function(results)
             )
             exports["spz-progression"]:GrantXP(source, xpGain)
 
+            -- Points Calculation & Granting
+            local pointsGain = exports["spz-progression"]:CalculatePoints(
+                finisher.position, 
+                finisher.carClass or 0
+            )
+            exports["spz-progression"]:GrantPoints(source, pointsGain)
+
             -- Bundled Profile Updates
-            -- Note: XP is already updated via GrantXP. 
+            -- Note: XP and Points are already updated via their respective modules. 
             -- We update other stats like top3_count here.
             local profileUpdates = {
                 top3_count = (finisher.position <= 3) and (profile.top3_count + 1) or profile.top3_count
             }
             
             -- TODO Hooks:
-            -- local classPointsGain = exports["spz-progression"]:CalculatePoints(finisher.position, finisher.carClass)
             -- local srDelta = exports["spz-progression"]:CalculateSRDelta(true, finisher.position, false)
             -- local iRatingDelta = exports["spz-progression"]:CalculateIRatingDelta(source, results.finishers)
             
-            -- profileUpdates.class_points = profile.class_points + (classPointsGain or 0)
             -- profileUpdates.sr = math.max(0.0, math.min(5.0, profile.sr + (srDelta or 0)))
             
             exports["spz-identity"]:UpdateProfile(source, profileUpdates)
@@ -45,8 +50,8 @@ AddEventHandler("SPZ:raceEnd", function(results)
             -- Sync to Client (Relays to spz-hud)
             TriggerClientEvent("SPZ:progressionUpdate", source, {
                 xpGain = xpGain,
+                pointsGain = pointsGain,
                 position = finisher.position,
-                -- pointsGain = classPointsGain,
                 -- srDelta = srDelta,
             })
         else
