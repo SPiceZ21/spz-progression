@@ -32,18 +32,23 @@ AddEventHandler("SPZ:raceEnd", function(results)
             )
             exports["spz-progression"]:GrantPoints(source, pointsGain)
 
+            -- SR Calculation & Application
+            local srDelta = exports["spz-progression"]:CalculateSRDelta({
+                dnf = false,
+                position = finisher.position,
+                personal_best = finisher.personalBest
+            })
+            local actualSrDelta = exports["spz-progression"]:ApplySR(source, srDelta)
+
             -- Bundled Profile Updates
-            -- Note: XP and Points are already updated via their respective modules. 
+            -- Note: XP, Points, and SR are already updated via their respective modules. 
             -- We update other stats like top3_count here.
             local profileUpdates = {
                 top3_count = (finisher.position <= 3) and (profile.top3_count + 1) or profile.top3_count
             }
             
             -- TODO Hooks:
-            -- local srDelta = exports["spz-progression"]:CalculateSRDelta(true, finisher.position, false)
             -- local iRatingDelta = exports["spz-progression"]:CalculateIRatingDelta(source, results.finishers)
-            
-            -- profileUpdates.sr = math.max(0.0, math.min(5.0, profile.sr + (srDelta or 0)))
             
             exports["spz-identity"]:UpdateProfile(source, profileUpdates)
 
@@ -51,8 +56,8 @@ AddEventHandler("SPZ:raceEnd", function(results)
             TriggerClientEvent("SPZ:progressionUpdate", source, {
                 xpGain = xpGain,
                 pointsGain = pointsGain,
-                position = finisher.position,
-                -- srDelta = srDelta,
+                srDelta = actualSrDelta,
+                position = finisher.position
             })
         else
             Log.warn("Could not process progression for source", source, "- Profile cache missing.")
@@ -67,12 +72,16 @@ AddEventHandler("SPZ:raceEnd", function(results)
 
             if profile then
                 -- DNFs receive NO XP/Points, only SR penalty
-                -- TODO: srDelta = exports["spz-progression"]:CalculateSRDelta(false, nil, true)
+                local srDelta = exports["spz-progression"]:CalculateSRDelta({
+                    dnf = true,
+                    dnf_reason = dnf.reason or "timeout"
+                })
+                local actualSrDelta = exports["spz-progression"]:ApplySR(source, srDelta)
                 
                 TriggerClientEvent("SPZ:progressionUpdate", source, {
                     xpGain = 0,
                     dnf = true,
-                    -- srDelta = srDelta
+                    srDelta = actualSrDelta
                 })
             end
         end
