@@ -13,10 +13,11 @@ SPZ.PointsTable = {
     -- P11+ = 0
 }
 
--- Multiplier awarded based on car class (numeric keys 0-3)
+-- Multipliers awarded based on car class (0-3).
+-- Note: These are mirrored in config.lua for tuning.
 SPZ.ClassMultiplier = {
-    [0] = 1.0,   -- Class C: base points
-    [1] = 1.2,   -- Class B: +20%
-    [2] = 1.5,   -- Class A: +50%
-    [3] = 2.0,   -- Class S: double points
+    [0] = 1.0,   -- Class C
+    [1] = 1.2,   -- Class B
+    [2] = 1.5,   -- Class A
+    [3] = 2.0,   -- Class S
 }

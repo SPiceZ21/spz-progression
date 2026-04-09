@@ -6,7 +6,7 @@ local Log = SPZ.Logger("spz-progression")
 ---@return number pointsGain
 local function CalculatePoints(position, carClass)
     local base = SPZ.PointsTable[position] or 0
-    local multiplier = SPZ.ClassMultiplier[carClass] or 1.0
+    local multiplier = (Config.ClassMultiplier and Config.ClassMultiplier[carClass]) or (SPZ.ClassMultiplier and SPZ.ClassMultiplier[carClass]) or 1.0
     return math.floor(base * multiplier)
 end
 

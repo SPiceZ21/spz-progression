@@ -14,7 +14,7 @@ local function CheckPromotion(source)
 
     -- The requirements are for the UNLOCKING of the NEXT tier
     local nextTier = tier + 1
-    local req = SPZ.LicenseRequirements[nextTier]
+    local req = (Config.LicenseRequirements and Config.LicenseRequirements[nextTier]) or (SPZ.LicenseRequirements and SPZ.LicenseRequirements[nextTier])
     if not req then return end
 
     local blockers = {}
