@@ -9,8 +9,8 @@ local Log = SPZ.Logger("spz-progression")
 local function CalculateXP(position, laps, raceType, personalBest)
     local base = Config.XP.BasePerRace
 
-    -- Position bonus: uses the configured table for P1-P10
-    local posBonus = Config.XP.PositionBonus[position] or 0
+    -- Position bonus: P1 gets full PositionBonus, each subsequent position loses PositionStep
+    local posBonus = math.max(0, (Config.XP.PositionBonus or 100) - ((position - 1) * (Config.XP.PositionStep or 15)))
 
     -- Lap/Run bonus: rewards distance/length
     local distanceBonus = 0
