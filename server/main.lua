@@ -106,10 +106,12 @@ AddEventHandler("SPZ:raceEnd", function(results)
             local profile = exports["spz-identity"]:GetProfile(source)
 
             if profile then
-                -- DNFs receive NO XP/Points, only SR penalty
+                -- DNFs receive NO XP/Points; SR penalty scales by how far they got
+                -- (progress 0 = quit at start, 1 = quit at finish line = minimal penalty)
                 local srDelta = exports["spz-progression"]:CalculateSRDelta({
-                    dnf = true,
-                    dnf_reason = dnf.reason or "timeout"
+                    dnf      = true,
+                    dnf_reason = dnf.dnf_reason or "timeout",
+                    progress = dnf.progress or 0,
                 })
                 local actualSrDelta = exports["spz-progression"]:ApplySR(source, srDelta)
                 
