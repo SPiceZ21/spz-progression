@@ -2,5 +2,6 @@
 ---@param data table The progression payload containing gains and rank updates.
 RegisterNetEvent("SPZ:progressionUpdate", function(data)
     -- Relay to hud for the post-race summary screen
-    exports["spz-hud"]:ShowProgression(data)
+    -- exports["spz-hud"]:ShowProgression(data)
+    print("[Progression] Received update: " .. json.encode(data))
 end)
