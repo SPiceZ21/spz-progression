@@ -7,6 +7,7 @@ version '1.0.0'
 author 'SPiceZ-Core'
 
 shared_scripts {
+  'shared/init.lua',
   'shared/points.lua',
   'shared/ranks.lua',
   'shared/licenses.lua',
