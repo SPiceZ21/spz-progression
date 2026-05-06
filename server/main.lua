@@ -13,7 +13,7 @@ AddEventHandler("SPZ:raceEnd", function(results)
     -- 1. Pre-process all racers for iRating (Field-wide calculation)
     local allRacers = {}
     for _, finisher in ipairs(results.finishers) do
-        local profile = exports["spz-identity"]:GetProfile(finisher.source)
+        local profile = Player(finisher.source).state.profile
         table.insert(allRacers, {
             source = finisher.source,
             i_rating = profile and profile.i_rating or 1500,
@@ -23,7 +23,7 @@ AddEventHandler("SPZ:raceEnd", function(results)
     end
     if results.dnf then
         for _, dnf in ipairs(results.dnf) do
-            local profile = exports["spz-identity"]:GetProfile(dnf.source)
+            local profile = Player(dnf.source).state.profile
             table.insert(allRacers, {
                 source = dnf.source,
                 i_rating = profile and profile.i_rating or 1500,
@@ -38,7 +38,7 @@ AddEventHandler("SPZ:raceEnd", function(results)
     -- 2. Process Finishers
     for _, finisher in ipairs(results.finishers) do
         local source = finisher.source
-        local profile = exports["spz-identity"]:GetProfile(source)
+        local profile = Player(source).state.profile
         
         if profile then
             -- XP Calculation & Granting
@@ -103,7 +103,7 @@ AddEventHandler("SPZ:raceEnd", function(results)
     if results.dnf then
         for _, dnf in ipairs(results.dnf) do
             local source = dnf.source
-            local profile = exports["spz-identity"]:GetProfile(source)
+            local profile = Player(source).state.profile
 
             if profile then
                 -- DNFs receive NO XP/Points; SR penalty scales by how far they got
