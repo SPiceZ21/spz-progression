@@ -75,14 +75,8 @@ local function ProcessPlayerProgression(source, raceData, field)
         last_race_at = now,
         last_race_track = raceData.trackId,
         same_track_count = profile.same_track_count,
-        top3_count = (not raceData.dnf and raceData.position <= 3) and (profile.top3_count + 1) or profile.top3_count
+        top3_count = (not raceData.dnf and raceData.position <= 3) and ((profile.top3_count or 0) + 1) or (profile.top3_count or 0)
     }
-
-    -- Class-specific top3 tracking
-    local classKey = "top3_in_class_" .. ({"c", "b", "a", "s"})[(raceData.class or 0) + 1]
-    if not raceData.dnf and raceData.position <= 3 then
-        profileUpdates[classKey] = (profile[classKey] or 0) + 1
-    end
 
     exports["spz-identity"]:UpdateProfile(source, profileUpdates)
 

@@ -16,9 +16,8 @@ local function CheckLicenseUnlock(source)
     -- 1. Level Gate
     if (profile.level or 1) < req.level then return end
 
-    -- 2. Top-3 in PRIOR tier Gate
-    local priorClassKey = "top3_in_class_" .. ({"c", "b", "a", "s"})[currentTier + 1]
-    local top3Count = profile[priorClassKey] or 0
+    -- 2. Top-3 Finishes Gate (Cumulative across all classes)
+    local top3Count = profile.top3_count or 0
     if top3Count < req.top3InPrior then return end
 
     -- 3. Safety Rating Gate
