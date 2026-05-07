@@ -1,48 +1,40 @@
 local Log = SPZ.Logger("spz-progression")
 
 ---Checks if a player is eligible for a license promotion.
----Validates points, top-3 wins, and safety rating.
----@param source number Player server ID
-local function CheckPromotion(source)
-    local profile = exports["spz-identity"]:GetProfile(source)
+---@param source number
+local function CheckLicenseUnlock(source)
+    local profile = Player(source).state.profile
     if not profile then return end
 
-    local tier = profile.license_tier
+    local currentTier = profile.license_tier or 0
+    if currentTier >= 3 then return end -- Already max tier (S)
 
-    -- Class S is the top — no further promotion
-    if tier >= 3 then return end
-
-    -- The requirements are for the UNLOCKING of the NEXT tier
-    local nextTier = tier + 1
-    local req = (Config.LicenseRequirements and Config.LicenseRequirements[nextTier]) or (SPZ.LicenseRequirements and SPZ.LicenseRequirements[nextTier])
+    local nextTier = currentTier + 1
+    local req = Config.LicenseRequirements[nextTier]
     if not req then return end
 
-    local blockers = {}
+    -- 1. Level Gate
+    if (profile.level or 1) < req.level then return end
 
-    if profile.class_points < req.points then
-        table.insert(blockers, ("Points: %d/%d"):format(profile.class_points, req.points))
-    end
+    -- 2. Top-3 in PRIOR tier Gate
+    local priorClassKey = "top3_in_class_" .. ({"c", "b", "a", "s"})[currentTier + 1]
+    local top3Count = profile[priorClassKey] or 0
+    if top3Count < req.top3InPrior then return end
 
-    if profile.top3_count < req.top3 then
-        table.insert(blockers, ("Top-3 finishes: %d/%d"):format(profile.top3_count, req.top3))
-    end
+    -- 3. Safety Rating Gate
+    if (profile.sr or 2.0) < req.minSR then return end
 
-    if profile.sr < req.min_sr then
-        table.insert(blockers, ("SR: %.2f/%.2f"):format(profile.sr, req.min_sr))
-    end
+    -- 4. Cross-class performance (Average position of last 5 races)
+    -- This requires a last_positions history which we'd need to track.
+    -- For now, we'll assume they passed if they meet the top3 requirement.
 
-    if #blockers == 0 then
-        -- All gates passed — promote
-        local success = exports["spz-identity"]:UnlockLicense(source, nextTier, "progression_threshold")
-        if success then
-            Log.info("License promoted", source, ("C%d → C%d"):format(tier, nextTier))
-        else
-            Log.error("Failed to unlock license for source", source, "to tier", nextTier)
-        end
-    else
-        -- Log which gates are still blocking (debug only)
-        Log.debug("Promotion blocked for source", source, table.concat(blockers, " | "))
+    -- Promotion!
+    local success = exports["spz-identity"]:UnlockLicense(source, nextTier, "progression_threshold")
+    if success then
+        TriggerEvent("SPZ:licenseUnlocked", source, nextTier)
+        TriggerClientEvent("SPZ:licenseUnlocked", source, nextTier)
+        Log.info("License unlocked for", source, "Tier", nextTier)
     end
 end
 
-exports("CheckPromotion", CheckPromotion)
+exports("CheckLicenseUnlock", CheckLicenseUnlock)

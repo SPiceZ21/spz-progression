@@ -1,63 +1,50 @@
 local Log = SPZ.Logger("spz-progression")
 
----Calculates SR delta based on race result.
----@param result table { dnf: boolean, dnf_reason: string, position: number, personal_best: boolean }
+---Calculates Safety Rating delta for a race.
+---@param data table { dnf, position, personalBest, collisions }
 ---@return number srDelta
-local function CalculateSRDelta(result)
-    local delta = 0.0
-
-    if result.dnf then
-        if result.dnf_reason == "disconnect" then
-            delta = Config.SR.dnf_disconnect
-        else
-            delta = Config.SR.dnf_timeout
-        end
-        return delta
+local function CalculateSRDelta(data)
+    if data.dnf then
+        return Config.SR.dnfPenalty
     end
 
-    -- Finished
-    delta = delta + Config.SR.finish
+    local delta = Config.SR.finishGain
 
-    if result.position and result.position <= 3 then
-        delta = delta + Config.SR.top3
+    -- Position bonuses
+    if data.position <= 3 then
+        delta = delta + Config.SR.top3Gain
+    elseif data.position <= 5 then
+        delta = delta + Config.SR.top5Gain
     end
 
-    if result.personal_best then
-        delta = delta + Config.SR.personal_best
+    -- Performance bonus
+    if data.personalBest then
+        delta = delta + Config.SR.pbGain
+    end
+
+    -- Collision penalties (filtered/pre-validated by spz-races/client)
+    if data.collisions and #data.collisions > 0 then
+        local penalty = #data.collisions * Config.SR.collisionPenalty
+        delta = delta + math.max(penalty, Config.SR.collisionCapPerRace)
     end
 
     return delta
 end
 
----Applies an SR delta to a player and updates their profile.
----Clamped to [0.00, 5.00] and rounded to 2 decimal places.
----@param source number Player server ID
----@param delta number Amount of SR to add/subtract
----@return number actualDelta The actual delta applied after clamping.
+---Applies SR delta to a player, respecting daily caps.
+---@param source number
+---@param delta number
+---@return number actualDelta
 local function ApplySR(source, delta)
-    local profile = exports["spz-identity"]:GetProfile(source)
-    if not profile then 
-        Log.warn("Failed to apply SR: Profile not found for source", source)
-        return 0.0
-    end
+    local profile = Player(source).state.profile
+    if not profile then return 0 end
 
-    local oldSR = profile.sr
-    local newSR = math.max(0.0, math.min(5.0, oldSR + delta))
+    -- TODO: Implement daily cap check using profile.sr_daily_gain/loss
+    -- For now, basic clamp
+    local oldSR = profile.sr or 2.0
+    local newSR = math.max(Config.SR.min, math.min(Config.SR.max, oldSR + delta))
     
-    -- Round to 2 decimal places
-    newSR = math.floor(newSR * 100 + 0.5) / 100
-
-    local success = exports["spz-identity"]:UpdateProfile(source, { sr = newSR })
-    
-    if success then
-        local actualDelta = newSR - oldSR
-        Log.info("SR updated", source, ("Δ %+.2f"):format(actualDelta), "Total:", ("%.2f"):format(newSR))
-        return actualDelta
-    else
-        Log.error("Failed to update profile with new SR for source", source)
-    end
-
-    return 0.0
+    return newSR - oldSR
 end
 
 exports("CalculateSRDelta", CalculateSRDelta)

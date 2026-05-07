@@ -1,49 +1,47 @@
 local Log = SPZ.Logger("spz-progression")
 
----Computes the appropriate rank string and name based on license tier and class points.
+---Computes the appropriate rank string based on license tier and class points.
 ---@param licenseTier number 0-3
 ---@param classPoints number current seasonal points
 ---@return string rank "C-1", "B-5" etc.
----@return string rankName "Newcomer", "Ace" etc.
 local function ComputeRank(licenseTier, classPoints)
-    local brackets = SPZ.RankBrackets[licenseTier]
-    if not brackets then return "Unknown", "Unknown" end
-
-    local currentBracket = brackets[1] -- default: lowest rank in class
-
-    for _, bracket in ipairs(brackets) do
-        if classPoints >= bracket.threshold then
-            currentBracket = bracket
+    local tierPrefix = ({"C", "B", "A", "S"})[licenseTier + 1]
+    local subRank = 5
+    
+    for i = 1, 5 do
+        if classPoints >= (Config.RankThresholds[i] or 999999) then
+            subRank = i
         end
     end
 
-    return currentBracket.rank, currentBracket.name
+    return tierPrefix .. "-" .. subRank
 end
 
----Checks if a player has ranked up and fires notifications/events.
----@param source number Player server ID
----@param oldRank string The previous rank string
----@param newRank string The new rank string (computed from ComputeRank)
----@param newRankName string The human-readable name of the new rank
-local function CheckRankUp(source, oldRank, newRank, newRankName)
+---Checks if a player has ranked up/down and fires notifications.
+---@param source number
+local function CheckRankPromotion(source)
+    local profile = Player(source).state.profile
+    if not profile then return end
+
+    local oldRank = profile.rank
+    local newRank = ComputeRank(profile.license_tier, profile.class_points)
+
     if newRank ~= oldRank then
-        -- Update the profile data via spz-identity
         exports["spz-identity"]:UpdateProfile(source, { rank = newRank })
-
-        -- Notify the player
-        SPZ.Notify(source, ("Rank up! You are now %s (%s)"):format(newRankName, newRank), "success", 6000)
-
-        -- Fire events for other modules to react (e.g., animations on HUD)
-        TriggerEvent("SPZ:rankChanged", source, oldRank, newRank, newRankName)
+        
+        local isPromotion = true -- Simple logic for now: if rank string changed, notify
+        -- In a real scenario, we'd compare the rank indices
+        
+        TriggerEvent("SPZ:rankChanged", source, oldRank, newRank, isPromotion)
         TriggerClientEvent("SPZ:rankChanged", source, {
-            old_rank      = oldRank,
-            new_rank      = newRank,
-            new_rank_name = newRankName,
+            oldRank = oldRank,
+            newRank = newRank,
+            isPromotion = isPromotion
         })
         
-        Log.info("Player", source, "ranked up from", oldRank, "to", newRank)
+        Log.info("Rank changed for", source, oldRank, "->", newRank)
     end
 end
 
 exports("ComputeRank", ComputeRank)
-exports("CheckRankUp", CheckRankUp)
+exports("CheckRankPromotion", CheckRankPromotion)
