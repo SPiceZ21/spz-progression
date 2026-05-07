@@ -1,54 +1,122 @@
--- config.lua
+-- spz-progression/config.lua
 Config = {}
 
--- [[ XP ]] ─────────────────────────────────────────────────────────────────────
-Config.XP = {
-  BasePerRace    = 50,     -- XP for finishing any race
-  PositionBonus  = 100,    -- P1 bonus
-  PositionStep   = 15,     -- Reduction per position (P2 = 85, P3 = 70...)
-  PerLap         = 10,     -- XP per lap (circuit)
-  SprintBonus    = 15,     -- Flat bonus for sprint runs instead of per-lap
-  PersonalBest   = 25,     -- PB bonus
-}
--- DNF = 0 XP always (hardcoded, not configurable)
+-- ── Pace tuning (preset to MEDIUM) ────────────────────────────────────────
+Config.Pace = "MEDIUM"  -- "CASUAL"|"MEDIUM"|"HARDCORE"
+                         -- multiplier applied globally
 
--- [[ Points multipliers by class ]] ─────────────────────────────────────────────
-Config.ClassMultiplier = {
-  [0] = 1.0,   -- Class C
-  [1] = 1.2,   -- Class B
-  [2] = 1.5,   -- Class A
-  [3] = 2.0,   -- Class S
+Config.PaceMultipliers = {
+  CASUAL   = { xp = 1.50, points = 1.50 },   -- 50% faster progression
+  MEDIUM   = { xp = 1.00, points = 1.00 },   -- baseline
+  HARDCORE = { xp = 0.65, points = 0.65 },   -- 35% slower
 }
 
--- [[ Safety Rating deltas ]] ────────────────────────────────────────────────────
-Config.SR = {
-  finish         =  0.10,
-  top3           =  0.20,
-  personal_best  =  0.05,
-  dnf_disconnect = -0.50,
-  dnf_timeout    = -0.25,
+-- ── XP rewards ────────────────────────────────────────────────────────────
+Config.XPRewards = {
+  positions  = { 250, 175, 125, 100, 85, 75, 65, 55 },
+  dnf        = 25,
+  perLap     = 10,           -- max 5 laps counted
+  maxLapBonus = 50,
+  cleanRace  = 25,
+  personalBest = 50,
+  trackRecord  = 100,
 }
 
--- [[ iRating ]] ─────────────────────────────────────────────────────────────────
-Config.IRating = {
-  KFactor  = 32,     -- Elo K-factor — higher = more volatile
-  MinValue = 100,    -- Floor: iRating can never go below this
+Config.ClassMultipliers = {
+  [0] = 1.00,   -- Class C
+  [1] = 1.25,   -- Class B
+  [2] = 1.50,   -- Class A
+  [3] = 1.75,   -- Class S
 }
 
--- [[ License promotion gates ]] ──────────────────────────────────────────────────
--- These mirror SPZ.LicenseRequirements in shared/licenses.lua
--- Change here and re-run if you want easier/harder promotion
+-- ── Class Points ──────────────────────────────────────────────────────────
+Config.ClassPointRewards = {
+  positions = { 50, 35, 25, 18, 12, 8, 4, 2 },
+  dnf       = 0,
+}
+
+-- ── Rank thresholds (within a class) ──────────────────────────────────────
+Config.RankThresholds = {
+  -- points required to reach each rank
+  [5] = 0,      -- starting rank in class
+  [4] = 50,
+  [3] = 125,
+  [2] = 250,
+  [1] = 400,    -- top of class
+}
+
+-- ── License unlocks ───────────────────────────────────────────────────────
 Config.LicenseRequirements = {
-  [1] = { points = 500,  top3 = 5,  min_sr = 1.0 },   -- C -> B
-  [2] = { points = 1000, top3 = 8,  min_sr = 1.5 },   -- B -> A
-  [3] = { points = 2000, top3 = 12, min_sr = 2.0 },   -- A -> S
+  [1] = { level = 10, top3InPrior = 10, minSR = 2.0 },   -- B
+  [2] = { level = 25, top3InPrior = 20, minSR = 2.5 },   -- A
+  [3] = { level = 50, top3InPrior = 30, minSR = 3.0 },   -- S
 }
 
--- [[ Season ]] ───────────────────────────────────────────────────────────────────
-Config.Season = {
-  -- Snapshot standings before reset?
-  SnapshotBeforeReset = true,
+-- ── SR ────────────────────────────────────────────────────────────────────
+Config.SR = {
+  finishGain        = 0.05,
+  top3Gain          = 0.10,
+  top5Gain          = 0.05,
+  pbGain            = 0.03,
+  dnfPenalty        = -0.20,
+  collisionPenalty  = -0.02,
+  collisionCapPerRace = -0.10,
+  dailyMaxGain      = 0.50,
+  dailyMaxLoss      = -0.40,
+  startBufferSeconds = 3,         -- ignore collisions in first N seconds
+  minImpactSpeed    = 30,         -- km/h, below = ignored
+  pingFilterMs      = 200,        -- desync filter
+  startingValue     = 2.0,
+  min               = 0.00,
+  max               = 5.00,
 }
 
--- [[ Debug ]] ────────────────────────────────────────────────────────────────────
+-- ── iRating ───────────────────────────────────────────────────────────────
+Config.IRating = {
+  positionDeltas = { 25, 18, 12, 6, 2, -2, -6, -10 },
+  dnfPenalty     = -15,
+  opponentBonus200 = 1,    -- per opponent rated 200+ above
+  opponentBonus500 = 2,    -- per opponent rated 500+ above
+  bonusCap       = 10,     -- +/- max bonus per race
+  startingValue  = 1500,
+  min            = 0,
+  max            = 5000,
+}
+
+-- ── Bonus modifiers ───────────────────────────────────────────────────────
+Config.Bonuses = {
+  dailyLogin       = 50,
+  weekStreak       = 100,
+  monthStreak      = 250,
+  classLoyaltyMax  = 1.25,
+  classLoyaltyStep = 0.05,
+  comeback = {
+    minPositionsGained = 5,
+    xpBonus           = 50,
+    pointsBonus       = 15,
+  },
+  trackRecordHolderXPBonus = 1.20,
+  trackTop3XPBonus         = 1.10,
+}
+
+-- ── Anti-abuse ────────────────────────────────────────────────────────────
+Config.AntiAbuse = {
+  minSecondsBetweenRaces  = 60,    -- below halves XP
+  minRaceDurationSeconds  = 45,    -- below = no progression
+  minFinishersForFullXP   = 3,
+  smallRacePenalty        = 0.50,  -- multiplier when < min finishers
+  sameTrackThreshold      = 4,     -- penalty after this many races same track
+  sameTrackPenalty4       = 0.75,
+  sameTrackPenalty5plus   = 0.50,
+}
+
+-- ── Season ────────────────────────────────────────────────────────────────
+Config.SeasonDays = 90
+Config.AutoSnapshotOnReset = true
+Config.SeasonRewardBadges = {
+  [1]  = "champion",
+  [3]  = "podium",
+  [10] = "top10",
+}
+
 Config.Debug = false

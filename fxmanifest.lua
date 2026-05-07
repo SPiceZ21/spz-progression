@@ -3,7 +3,7 @@ game 'gta5'
 
 name 'spz-progression'
 description 'SPiceZ-Core — XP, SR, iRating, ranks, license promotion'
-version '2.0.0'
+version '2.1.0'
 author 'SPiceZ-Core'
 
 shared_scripts {

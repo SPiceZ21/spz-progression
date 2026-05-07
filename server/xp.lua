@@ -1,52 +1,63 @@
 local Log = SPZ.Logger("spz-progression")
 
+---Calculates XP required to reach a specific level (cumulative).
+---@param level number
+---@return number
+local function XPRequired(level)
+    if level <= 1 then return 0 end
+    -- Quadratic curve: math.floor(50 * (level - 1) ^ 2 + 50 * (level - 1))
+    return math.floor(50 * (level - 1) ^ 2 + 50 * (level - 1))
+end
+
+---Calculates level from total XP.
+---@param xp number
+---@return number
+local function LevelFromXP(xp)
+    -- Inverse of XPRequired: floor((-50 + sqrt(50^2 + 4 * 50 * xp)) / 100) + 1
+    if xp <= 0 then return 1 end
+    local level = math.floor((-50 + math.sqrt(50^2 + 4 * 50 * xp)) / 100) + 1
+    return math.max(1, math.min(100, level))
+end
+
 ---Calculates XP gain based on race performance.
----@param position number Finisher position (1-based)
----@param laps number Total laps completed
----@param raceType string "circuit" or "sprint"
----@param personalBest boolean Whether the player broke their PB
+---@param data table Race results data (position, laps, class, bonuses)
 ---@return number xpGain
-local function CalculateXP(position, laps, raceType, personalBest)
-    local base = Config.XP.BasePerRace
-
-    -- Position bonus: P1 gets full PositionBonus, each subsequent position loses PositionStep
-    local posBonus = math.max(0, (Config.XP.PositionBonus or 100) - ((position - 1) * (Config.XP.PositionStep or 15)))
-
-    -- Lap/Run bonus: rewards distance/length
-    local distanceBonus = 0
-    if raceType == "circuit" then
-        distanceBonus = laps * Config.XP.PerLap
-    elseif raceType == "sprint" then
-        distanceBonus = Config.XP.SprintBonus -- Fixed bonus for sprints
-    end
-
-    -- Personal best bonus
-    local pbBonus = personalBest and Config.XP.PersonalBest or 0
-
-    return base + posBonus + distanceBonus + pbBonus
-end
-
----Grants XP to a specific player and updates their profile.
----@param source number Player server ID
----@param amount number Amount of XP to grant
-local function GrantXP(source, amount)
-    local profile = exports["spz-identity"]:GetProfile(source)
-    if not profile then 
-        Log.warn("Failed to grant XP: Profile not found for source", source)
-        return 
-    end
-
-    local newTotal = profile.xp + amount
-    local success = exports["spz-identity"]:UpdateProfile(source, {
-        xp = newTotal,
-    })
-
-    if success then
-        Log.info("XP granted", source, "+" .. amount, "total", newTotal)
+local function CalculateXP(data)
+    local xp = 0
+    
+    -- 1. Base position XP
+    if data.dnf then
+        xp = Config.XPRewards.dnf
     else
-        Log.error("Failed to update profile with new XP for source", source)
+        local pos = data.position or 8
+        xp = Config.XPRewards.positions[pos] or Config.XPRewards.positions[#Config.XPRewards.positions]
     end
+
+    -- 2. Class multiplier
+    local classMulti = Config.ClassMultipliers[data.class] or 1.0
+    xp = xp * classMulti
+
+    -- 3. Lap bonuses
+    local lapBonus = (data.laps or 0) * Config.XPRewards.perLap
+    xp = xp + math.min(lapBonus, Config.XPRewards.maxLapBonus)
+
+    -- 4. Achievement bonuses
+    if data.cleanRace then xp = xp + Config.XPRewards.cleanRace end
+    if data.personalBest then xp = xp + Config.XPRewards.personalBest end
+    if data.trackRecord then xp = xp + Config.XPRewards.trackRecord end
+
+    -- 5. Special bonuses (Comeback, Track Record Holder)
+    if data.comeback then xp = xp + Config.Bonuses.comeback.xpBonus end
+    if data.isTrackRecordHolder then xp = xp * Config.Bonuses.trackRecordHolderXPBonus end
+    if data.isTrackTop3 then xp = xp * Config.Bonuses.trackTop3XPBonus end
+
+    -- 6. Apply Pace Multiplier
+    local pace = Config.PaceMultipliers[Config.Pace] or Config.PaceMultipliers.MEDIUM
+    xp = xp * pace.xp
+
+    return math.floor(xp)
 end
 
+exports("XPRequired", XPRequired)
+exports("LevelFromXP", LevelFromXP)
 exports("CalculateXP", CalculateXP)
-exports("GrantXP", GrantXP)
