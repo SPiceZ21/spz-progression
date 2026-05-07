@@ -115,8 +115,8 @@ AddEventHandler("SPZ:raceEnd", function(results)
         local p = Player(f.source).state.profile
         table.insert(field, { source = f.source, iRating = p and p.i_rating or 1500, position = f.position, dnf = false })
     end
-    if results.dnfs then
-        for _, d in ipairs(results.dnfs) do
+    if results.dnf then
+        for _, d in ipairs(results.dnf) do
             local p = Player(d.source).state.profile
             table.insert(field, { source = d.source, iRating = p and p.i_rating or 1500, position = 999, dnf = true })
         end
@@ -124,7 +124,7 @@ AddEventHandler("SPZ:raceEnd", function(results)
 
     -- Process finishers
     for _, finisher in ipairs(results.finishers) do
-        finisher.class = results.class
+        finisher.class = results.carClass
         finisher.trackId = results.trackId
         finisher.duration = results.duration
         finisher.finisherCount = #results.finishers
@@ -132,9 +132,9 @@ AddEventHandler("SPZ:raceEnd", function(results)
     end
 
     -- Process DNFs
-    if results.dnfs then
-        for _, dnf in ipairs(results.dnfs) do
-            dnf.class = results.class
+    if results.dnf then
+        for _, dnf in ipairs(results.dnf) do
+            dnf.class = results.carClass
             dnf.trackId = results.trackId
             dnf.duration = results.duration
             dnf.finisherCount = #results.finishers
