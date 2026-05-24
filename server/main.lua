@@ -1,5 +1,22 @@
 local Log = SPZ.Logger("spz-progression")
 
+local function CalculateCPProgress(points)
+    local thresholds = { 0, 50, 125, 250, 400 }
+    if points >= 400 then return 1.0 end
+    
+    local currentFloor = 0
+    local nextCeil = 50
+    for i = 1, #thresholds - 1 do
+        if points >= thresholds[i] and points < thresholds[i+1] then
+            currentFloor = thresholds[i]
+            nextCeil = thresholds[i+1]
+            break
+        end
+    end
+    
+    return (points - currentFloor) / (nextCeil - currentFloor)
+end
+
 ---Processes progression for a single player at the end of a race.
 ---@param source number Player server ID
 ---@param raceData table Data from the race (position, class, laps, dnf, collisions, etc.)
@@ -65,6 +82,17 @@ local function ProcessPlayerProgression(source, raceData, field)
     local newSR = math.max(0, math.min(5.0, (profile.sr or 2.0) + srDelta))
     local newIR = math.max(0, math.min(5000, (profile.i_rating or 1500) + irDelta))
 
+    -- Calculate XP progress within current level
+    local xpForCurrentLevel = exports["spz-progression"]:XPRequired(newLevel)
+    local xpForNextLevel = exports["spz-progression"]:XPRequired(newLevel + 1)
+    local xpProgress = 0.0
+    if xpForNextLevel > xpForCurrentLevel then
+        xpProgress = (newXP - xpForCurrentLevel) / (xpForNextLevel - xpForCurrentLevel)
+    end
+
+    -- Calculate Class Points progress within current rank
+    local cpProgress = CalculateCPProgress(newPoints)
+
     -- 4. Update Profile & Save
     local profileUpdates = {
         xp = newXP,
@@ -92,7 +120,9 @@ local function ProcessPlayerProgression(source, raceData, field)
 
     TriggerClientEvent("SPZ:progressionUpdate", source, {
         xpGain = xpGain,
+        xpProgress = xpProgress,
         pointsGain = pointsGain,
+        cpProgress = cpProgress,
         srDelta = srDelta,
         irDelta = irDelta,
         level = newLevel,
