@@ -28,7 +28,7 @@
 | Client | `client/main.lua`      | Progression event handling and UI feedback        |
 
 ## Dependencies
-- spz-lib
+- ox_lib
 - spz-core
 - spz-identity
 - spz-races
