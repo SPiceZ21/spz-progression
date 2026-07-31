@@ -25,6 +25,7 @@ server_scripts {
   'server/promotion.lua',
   'server/season.lua',
   'server/rivals.lua',
+  'server/series.lua',
 }
 
 client_scripts {
