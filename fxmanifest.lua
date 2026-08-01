@@ -18,6 +18,7 @@ server_scripts {
   'config.lua',
   'server/main.lua',
   'server/xp.lua',
+  'server/bonus.lua',
   'server/points.lua',
   'server/sr.lua',
   'server/irating.lua',

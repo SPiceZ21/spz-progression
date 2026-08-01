@@ -99,6 +99,14 @@ Config.Bonuses = {
   trackTop3XPBonus         = 1.10,
 }
 
+-- ── Perfect lap (all sectors purple in one lap) ────────────────────────────
+-- Awarded by SPZ:perfectLap (fired from spz-races sector timing) via
+-- server/bonus.lua. Flat grant, independent of race results.
+Config.PerfectLap = {
+  xp      = 150,
+  credits = 500,
+}
+
 -- ── Anti-abuse ────────────────────────────────────────────────────────────
 Config.AntiAbuse = {
   minSecondsBetweenRaces  = 60,    -- below halves XP
