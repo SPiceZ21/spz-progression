@@ -98,6 +98,9 @@ local function ProcessPlayerProgression(source, raceData, field)
         xp = newXP,
         level = newLevel,
         class_points = newPoints,
+        -- All-time total: same gain, but never reset at season rollover. This was
+        -- missing, so every leaderboard (in-game + Discord) showed 0 points.
+        alltime_points = (profile.alltime_points or 0) + math.floor(pointsGain),
         sr = newSR,
         i_rating = newIR,
         last_race_at = now,
