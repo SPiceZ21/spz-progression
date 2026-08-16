@@ -6,7 +6,7 @@
 
 `spz-progression` listens for race results and turns them into progress: XP and levels,
 championship points, Safety Rating, an Elo-style iRating, rank promotion and demotion, and
-license unlocks. It also handles seasons, rivals and series.
+license unlocks. It also handles seasons and rivals.
 
 ## Structure
 
@@ -24,7 +24,7 @@ license unlocks. It also handles seasons, rivals and series.
 | Server | `server/irating.lua` | iRating deltas |
 | Server | `server/ranks.lua` · `promotion.lua` | Rank movement and license grants |
 | Server | `server/season.lua` | Season reset and archiving |
-| Server | `server/rivals.lua` · `series.lua` | Rivals and race series |
+| Server | `server/rivals.lua` | Rivals |
 | Client | `client/main.lua` | Progression events and UI feedback |
 
 ## Exports
@@ -36,11 +36,10 @@ license unlocks. It also handles seasons, rivals and series.
 | Ratings | `CalculateSRDelta` · `ApplySR` · `CalculateIRatingDeltas` |
 | Ranks | `ComputeRank` · `CheckRankPromotion` |
 | Licenses | `CheckLicenseUnlock` |
-| Series | `GetSeries` |
 
 ## Commands
 
-`/spz` · `/rival` · `/series`
+`/spz` · `/rival`
 
 ## Dependencies
 
