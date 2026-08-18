@@ -12,6 +12,9 @@ end
 
 if IsDuplicityVersion() then
     SPZ.Notify = function(source, msg, ntype, duration)
-        TriggerClientEvent('ox_lib:notify', source, { description = msg, type = ntype or "info", duration = duration })
+        TriggerClientEvent('ox_lib:notify', source, {
+            description = msg, type = ntype or "info", duration = duration,
+            position = "center-left",
+        })
     end
 end

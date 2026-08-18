@@ -33,6 +33,7 @@ local function notify(src, title, msg, ntype)
     if not src then return end
     TriggerClientEvent("ox_lib:notify", src, {
         title = title, description = msg, type = ntype or "inform", duration = 8000,
+        position = "center-left",
     })
 end
 
