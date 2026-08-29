@@ -171,3 +171,91 @@ CreateThread(function()
         end
     end
 end)
+
+-- ── Leaderboard tablet: rival card + head-to-head times ──────────────────────
+-- Returns the caller's rival and a per-track comparison of stored best laps.
+-- Times stay in milliseconds; the UI formats them.
+
+lib.callback.register("spz-progression:getRivalBoard", function(source)
+    local pid = profileId(source)
+    if not pid then return { rival = nil, tracks = {} } end
+
+    local rid = getRival(pid)
+    if not rid then return { rival = nil, tracks = {} } end
+
+    local rival = MySQL.single.await(
+        [[SELECT p.id, p.username, p.avatar_url, p.i_rating, p.rank, p.level,
+                 p.alltime_points, r.assigned_at
+          FROM rivals r
+          JOIN players p ON p.id = r.rival_id
+          WHERE r.player_id = ?]],
+        { pid }
+    )
+    if not rival then return { rival = nil, tracks = {} } end
+
+    local me = MySQL.single.await(
+        "SELECT username, avatar_url, i_rating FROM players WHERE id = ?", { pid }
+    ) or {}
+
+    -- One row per track either of you has driven; NULL means no time yet.
+    -- The server-wide best and your standing on it give the expanded panel
+    -- something the row itself doesn't already show.
+    local rows = MySQL.query.await(
+        [[SELECT r.track,
+                 MAX(CASE WHEN r.player_id = ? THEN r.best_ms END) AS my_ms,
+                 MAX(CASE WHEN r.player_id = ? THEN r.best_ms END) AS rival_ms,
+                 (SELECT MIN(a.best_ms) FROM racelines a WHERE a.track = r.track)     AS track_best,
+                 (SELECT p.username FROM racelines b JOIN players p ON p.id = b.player_id
+                   WHERE b.track = r.track ORDER BY b.best_ms ASC LIMIT 1)            AS track_best_by,
+                 (SELECT COUNT(*) FROM racelines c WHERE c.track = r.track)           AS drivers,
+                 (SELECT COUNT(*) + 1 FROM racelines d
+                   WHERE d.track = r.track
+                     AND d.best_ms < MAX(CASE WHEN r.player_id = ? THEN r.best_ms END)) AS my_position
+          FROM racelines r
+          WHERE r.player_id IN (?, ?)
+          GROUP BY r.track
+          ORDER BY r.track ASC]],
+        { pid, rid, pid, pid, rid }
+    ) or {}
+
+    local tracks, wins, losses = {}, 0, 0
+    for _, r in ipairs(rows) do
+        local mine  = tonumber(r.my_ms)
+        local their = tonumber(r.rival_ms)
+        if mine and their then
+            if mine < their then wins = wins + 1 else losses = losses + 1 end
+        end
+        tracks[#tracks + 1] = {
+            track    = r.track,
+            my_ms    = mine,
+            rival_ms = their,
+            -- +ve margin = you are faster
+            margin   = (mine and their) and (their - mine) or nil,
+            -- expanded panel only
+            track_best    = tonumber(r.track_best) or nil,
+            track_best_by = r.track_best_by,
+            drivers       = tonumber(r.drivers) or nil,
+            my_position   = mine and (tonumber(r.my_position) or nil) or nil,
+            gap_to_best   = (mine and r.track_best) and (mine - tonumber(r.track_best)) or nil,
+        }
+    end
+
+    return {
+        me = {
+            name    = me.username or "You",
+            avatar  = me.avatar_url,
+            iRating = tonumber(me.i_rating) or 1000,
+        },
+        rival = {
+            name        = rival.username or "Rival",
+            avatar      = rival.avatar_url,
+            iRating     = tonumber(rival.i_rating) or 1000,
+            rank_title  = rival.rank,
+            level       = tonumber(rival.level) or 1,
+            points      = tonumber(rival.alltime_points) or 0,
+            assigned_at = rival.assigned_at,
+        },
+        head_to_head = { wins = wins, losses = losses, tracks = #tracks },
+        tracks = tracks,
+    }
+end)

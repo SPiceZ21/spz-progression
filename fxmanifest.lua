@@ -7,6 +7,7 @@ version '2.1.0'
 author 'SPiceZ-Core'
 
 shared_scripts {
+  '@ox_lib/init.lua',   -- lib.callback for the leaderboard's Rivals tab
   'shared/init.lua',
   'shared/points.lua',
   'shared/ranks.lua',
