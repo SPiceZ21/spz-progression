@@ -115,6 +115,13 @@ AddEventHandler("spz-raceline:lapCompleted", function(src, track, lapMs)
         local rivalName = nameOf(rid)
         local gap       = (rivalBest - lapMs) / 1000
 
+        -- Logged for the dashboards' rivalry feed.
+        MySQL.insert([[
+            INSERT INTO rival_events
+                (kind, track, actor_player_id, target_player_id, new_ms, old_ms, margin_ms)
+            VALUES ('player', ?, ?, ?, ?, ?, ?)
+        ]], { track, pid, rid, lapMs, rivalBest, rivalBest - lapMs })
+
         -- You (online — you just drove it)
         notify(src, "RIVAL BEATEN",
             ("You beat your rival %s on %s by %.2fs!"):format(rivalName, track, gap), "success")
@@ -240,7 +247,33 @@ lib.callback.register("spz-progression:getRivalBoard", function(source)
         }
     end
 
+    -- Recent takeovers either way, for the dashboard's activity list.
+    local feedRows = MySQL.query.await([[
+        SELECT e.track, e.new_ms, e.old_ms, e.margin_ms, e.created_at,
+               e.actor_player_id, a.username AS actor, t.username AS target
+        FROM rival_events e
+        JOIN players a ON a.id = e.actor_player_id
+        LEFT JOIN players t ON t.id = e.target_player_id
+        WHERE e.kind = 'player'
+          AND ((e.actor_player_id = ? AND e.target_player_id = ?)
+            OR (e.actor_player_id = ? AND e.target_player_id = ?))
+        ORDER BY e.created_at DESC
+        LIMIT 12
+    ]], { pid, rid, rid, pid }) or {}
+
+    local feed = {}
+    for _, r in ipairs(feedRows) do
+        feed[#feed + 1] = {
+            track = r.track, actor = r.actor, target = r.target,
+            ours = r.actor_player_id == pid,
+            new_ms = tonumber(r.new_ms), old_ms = tonumber(r.old_ms),
+            margin_ms = tonumber(r.margin_ms), created_at = r.created_at,
+        }
+    end
+
     return {
+        feed = feed,
+        assigned_at = rival.assigned_at,
         me = {
             name    = me.username or "You",
             avatar  = me.avatar_url,
@@ -258,4 +291,39 @@ lib.callback.register("spz-progression:getRivalBoard", function(source)
         head_to_head = { wins = wins, losses = losses, tracks = #tracks },
         tracks = tracks,
     }
+end)
+
+-- ── Redraw ────────────────────────────────────────────────────────────────────
+-- Lets a driver pull a different rival once the current pairing has stood for a
+-- while, so a mismatched draw isn't permanent.
+
+local REROLL_COOLDOWN = 6 * 60 * 60   -- 6 hours
+
+lib.callback.register("spz-progression:rerollRival", function(source)
+    local pid = profileId(source)
+    if not pid then return { ok = false, error = "No profile" } end
+
+    local age = tonumber(MySQL.scalar.await(
+        "SELECT TIMESTAMPDIFF(SECOND, assigned_at, NOW()) FROM rivals WHERE player_id = ? LIMIT 1", { pid }))
+    if age and age < REROLL_COOLDOWN then
+        local mins = math.ceil((REROLL_COOLDOWN - age) / 60)
+        return { ok = false, error = ("Rival was just drawn — try again in %d min"):format(mins) }
+    end
+
+    local current = getRival(pid)
+    local myIr = MySQL.scalar.await("SELECT i_rating FROM players WHERE id = ? LIMIT 1", { pid }) or 1500
+
+    -- Closest rating that is neither us nor the rival we already have.
+    local next_ = MySQL.scalar.await([[
+        SELECT id FROM players
+        WHERE id <> ? AND banned = 0 AND (? IS NULL OR id <> ?)
+        ORDER BY ABS(COALESCE(i_rating, 1500) - ?) ASC
+        LIMIT 1
+    ]], { pid, current, current, myIr })
+    if not next_ then return { ok = false, error = "No other driver to match against" } end
+
+    MySQL.query.await(
+        "INSERT INTO rivals (player_id, rival_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE rival_id = VALUES(rival_id), assigned_at = NOW()",
+        { pid, next_ })
+    return { ok = true }
 end)
