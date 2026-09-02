@@ -201,7 +201,8 @@ lib.callback.register("spz-progression:getRivalBoard", function(source)
     if not rival then return { rival = nil, tracks = {} } end
 
     local me = MySQL.single.await(
-        "SELECT username, avatar_url, i_rating FROM players WHERE id = ?", { pid }
+        -- `rank` is reserved in MySQL 8; unqualified it has to be quoted.
+        "SELECT username, avatar_url, i_rating, `rank` AS rank_title FROM players WHERE id = ?", { pid }
     ) or {}
 
     -- One row per track either of you has driven; NULL means no time yet.
@@ -278,6 +279,7 @@ lib.callback.register("spz-progression:getRivalBoard", function(source)
             name    = me.username or "You",
             avatar  = me.avatar_url,
             iRating = tonumber(me.i_rating) or 1000,
+            rank_title = me.rank_title,
         },
         rival = {
             name        = rival.username or "Rival",
