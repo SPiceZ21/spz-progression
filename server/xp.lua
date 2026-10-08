@@ -46,10 +46,8 @@ local function CalculateXP(data)
     if data.personalBest then xp = xp + Config.XPRewards.personalBest end
     if data.trackRecord then xp = xp + Config.XPRewards.trackRecord end
 
-    -- 5. Special bonuses (Comeback, Track Record Holder)
+    -- 5. Comeback bonus (gained >= N positions from the grid)
     if data.comeback then xp = xp + Config.Bonuses.comeback.xpBonus end
-    if data.isTrackRecordHolder then xp = xp * Config.Bonuses.trackRecordHolderXPBonus end
-    if data.isTrackTop3 then xp = xp * Config.Bonuses.trackTop3XPBonus end
 
     -- 6. Apply Pace Multiplier
     local pace = Config.PaceMultipliers[Config.Pace] or Config.PaceMultipliers.MEDIUM

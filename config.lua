@@ -1,17 +1,65 @@
 -- spz-progression/config.lua
 Config = {}
 
--- ── Pace tuning (preset to MEDIUM) ────────────────────────────────────────
-Config.Pace = "MEDIUM"  -- "CASUAL"|"MEDIUM"|"HARDCORE"
-                         -- multiplier applied globally
+-- ══════════════════════════════════════════════════════════════════════════
+--  RANK (ranking v3) — the ONE rules table for rank. See Docs/ranking-design.md
+--  and Docs/report-v3/ranking-v3.pdf. Rank is display/prestige only: nothing
+--  may gate cars, tracks or classes on it.
+-- ══════════════════════════════════════════════════════════════════════════
+Config.Rules = {
+  version = 3,
 
-Config.PaceMultipliers = {
-  CASUAL   = { xp = 1.50, points = 1.50 },   -- 50% faster progression
-  MEDIUM   = { xp = 1.00, points = 1.00 },   -- baseline
-  HARDCORE = { xp = 0.65, points = 0.65 },   -- 35% slower
+  -- Ladder: 4 classes x 5 sub-ranks (5 = entry, 1 = top). RP to enter each
+  -- class and the RP step between its sub-ranks. Titles come from
+  -- spz-identity/shared/ranks.lua (SPZ.RankNames).
+  tiers = {
+    { id = 0, letter = "C", enter = 0,    step = 50   },
+    { id = 1, letter = "B", enter = 250,  step = 180  },
+    { id = 2, letter = "A", enter = 1150, step = 540  },
+    { id = 3, letter = "S", enter = 3850, step = 1000 },
+  },
+  boardSize = 100,           -- S-1 players numbered #1..#100
+
+  -- The formula
+  slope         = 60,        -- RP between last and winner (before weight)
+  breakEven     = 0.35,      -- finishing percentile where base RP is ~0
+  participation = 2,         -- flat RP for taking part
+  weightDivisor = 5,         -- w = min(1, (N-1)/weightDivisor): full from 6 players
+  strengthScale = 2000,      -- RP difference that moves the field factor by 1.0
+  strengthMin   = 0.5,
+  strengthMax   = 1.5,
+
+  -- Big fields (there is NO maximum field size anywhere)
+  podium            = { 10, 6, 3 },  -- extra RP for P1..P3
+  podiumFrom        = 8,             -- 0 at N <= 8 ...
+  podiumFull        = 24,            -- ... full from N >= 24
+  streakTopFraction = 0.10,          -- streak zone = top max(3, ceil(10% of N))
+  streakTopMin      = 3,
+
+  -- Supports (raise gains only)
+  clean       = 0.15,        -- zero incidents
+  streakStep  = 0.05,        -- per consecutive streak-zone finish
+  streakMax   = 0.20,
+  boostCap    = 1.5,
+  perfectLap  = 10,          -- flat RP, granted on SPZ:perfectLap
+  trackRecord = 10,          -- flat RP, granted on spz-raceline:recordTaken
+
+  -- Safety
+  ratedMinField      = 2,    -- N below this: no RP / SR / iRating / top-3 change
+  minDurationSeconds = 45,   -- shorter races are void
+  dailyCap           = 300,  -- max positive RP per UTC day
 }
 
--- ── XP rewards ────────────────────────────────────────────────────────────
+-- ── Pace tuning (XP only) ─────────────────────────────────────────────────
+Config.Pace = "MEDIUM"  -- "CASUAL"|"MEDIUM"|"HARDCORE"
+
+Config.PaceMultipliers = {
+  CASUAL   = { xp = 1.50 },
+  MEDIUM   = { xp = 1.00 },
+  HARDCORE = { xp = 0.65 },
+}
+
+-- ── XP rewards (level is a reward, not a rank input) ──────────────────────
 Config.XPRewards = {
   positions  = { 250, 175, 125, 100, 85, 75, 65, 55 },
   dnf        = 25,
@@ -22,37 +70,15 @@ Config.XPRewards = {
   trackRecord  = 100,
 }
 
+-- Car class multiplier on XP (keyed by class letter or tier number).
 Config.ClassMultipliers = {
-  [0] = 1.00,   -- Class C
-  [1] = 1.25,   -- Class B
-  [2] = 1.50,   -- Class A
-  [3] = 1.75,   -- Class S
+  [0] = 1.00, C = 1.00, D = 1.00,
+  [1] = 1.25, B = 1.25,
+  [2] = 1.50, A = 1.50,
+  [3] = 1.75, S = 1.75,
 }
 
--- ── Class Points ──────────────────────────────────────────────────────────
-Config.ClassPointRewards = {
-  positions = { 50, 35, 25, 18, 12, 8, 4, 2 },
-  dnf       = 0,
-}
-
--- ── Rank thresholds (within a class) ──────────────────────────────────────
-Config.RankThresholds = {
-  -- points required to reach each rank
-  [5] = 0,      -- starting rank in class
-  [4] = 50,
-  [3] = 125,
-  [2] = 250,
-  [1] = 400,    -- top of class
-}
-
--- ── License unlocks ───────────────────────────────────────────────────────
-Config.LicenseRequirements = {
-  [1] = { level = 10, top3InPrior = 10, minSR = 2.0 },   -- B
-  [2] = { level = 25, top3InPrior = 20, minSR = 2.5 },   -- A
-  [3] = { level = 50, top3InPrior = 30, minSR = 3.0 },   -- S
-}
-
--- ── SR ────────────────────────────────────────────────────────────────────
+-- ── SR (display stat) ─────────────────────────────────────────────────────
 Config.SR = {
   finishGain        = 0.05,
   top3Gain          = 0.10,
@@ -63,54 +89,36 @@ Config.SR = {
   collisionCapPerRace = -0.10,
   dailyMaxGain      = 0.50,
   dailyMaxLoss      = -0.40,
-  startBufferSeconds = 3,         -- ignore collisions in first N seconds
-  minImpactSpeed    = 30,         -- km/h, below = ignored
-  pingFilterMs      = 200,        -- desync filter
   startingValue     = 2.0,
   min               = 0.00,
   max               = 5.00,
 }
 
--- ── iRating ───────────────────────────────────────────────────────────────
+-- ── iRating (display stat + rival matching) — zero-sum pairwise Elo ───────
 Config.IRating = {
-  positionDeltas = { 25, 18, 12, 6, 2, -2, -6, -10 },
-  dnfPenalty     = -15,
-  opponentBonus200 = 1,    -- per opponent rated 200+ above
-  opponentBonus500 = 2,    -- per opponent rated 500+ above
-  bonusCap       = 10,     -- +/- max bonus per race
-  startingValue  = 1500,
-  min            = 0,
-  max            = 5000,
+  k             = 32,
+  startingValue = 1500,
+  min           = 0,
+  max           = 5000,
 }
 
 -- ── Bonus modifiers ───────────────────────────────────────────────────────
 Config.Bonuses = {
-  dailyLogin       = 50,
-  weekStreak       = 100,
-  monthStreak      = 250,
-  classLoyaltyMax  = 1.25,
-  classLoyaltyStep = 0.05,
   comeback = {
     minPositionsGained = 5,
     xpBonus           = 50,
-    pointsBonus       = 15,
   },
-  trackRecordHolderXPBonus = 1.20,
-  trackTop3XPBonus         = 1.10,
 }
 
 -- ── Perfect lap (all sectors purple in one lap) ────────────────────────────
--- Awarded by SPZ:perfectLap (fired from spz-races sector timing) via
--- server/bonus.lua. Flat grant, independent of race results.
 Config.PerfectLap = {
   xp      = 150,
   credits = 500,
 }
 
--- ── Anti-abuse ────────────────────────────────────────────────────────────
+-- ── Anti-abuse (XP) ───────────────────────────────────────────────────────
 Config.AntiAbuse = {
   minSecondsBetweenRaces  = 60,    -- below halves XP
-  minRaceDurationSeconds  = 45,    -- below = no progression
   minFinishersForFullXP   = 3,
   smallRacePenalty        = 0.50,  -- multiplier when < min finishers
   sameTrackThreshold      = 4,     -- penalty after this many races same track
@@ -118,13 +126,3 @@ Config.AntiAbuse = {
   sameTrackPenalty5plus   = 0.50,
 }
 
--- ── Season ────────────────────────────────────────────────────────────────
-Config.SeasonDays = 90
-Config.AutoSnapshotOnReset = true
-Config.SeasonRewardBadges = {
-  [1]  = "champion",
-  [3]  = "podium",
-  [10] = "top10",
-}
-
-Config.Debug = false

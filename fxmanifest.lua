@@ -2,30 +2,28 @@ fx_version 'cerulean'
 game 'gta5'
 
 name 'spz-progression'
-description 'SPiceZ-Core — XP, SR, iRating, ranks, license promotion'
+description 'SPiceZ-Core — XP, SR, iRating and Rank Points (ranking v3)'
 version '1.1.0'
 author 'SPiceZ-Core'
 
 shared_scripts {
   '@ox_lib/init.lua',   -- lib.callback for the leaderboard's Rivals tab
+  '@spz-core/shared/events.lua',
   'shared/init.lua',
-  'shared/points.lua',
-  'shared/ranks.lua',
-  'shared/licenses.lua',
 }
 
 server_scripts {
   '@oxmysql/lib/MySQL.lua',
   'config.lua',
-  'server/main.lua',
+  -- pure domain code (no natives / exports / DB) — also run by tests/run.lua
+  'domain/rank.lua',
+  'domain/rp.lua',
+  'domain/irating.lua',
+  'domain/sr.lua',
   'server/xp.lua',
+  'server/main.lua',
   'server/bonus.lua',
-  'server/points.lua',
-  'server/sr.lua',
-  'server/irating.lua',
-  'server/ranks.lua',
-  'server/promotion.lua',
-  'server/season.lua',
+  'server/rank_admin.lua',
   'server/rivals.lua',
 }
 
