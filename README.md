@@ -1,79 +1,73 @@
 # spz-progression
 
-> XP, Safety Rating, iRating and Rank Points (ranking v3) · rivals
+> XP, safety rating, iRating and rank points.
+
+![version](https://img.shields.io/badge/version-1.1.1-ff6200) ![SPiceZ-Core](https://img.shields.io/badge/SPiceZ--Core-beta-18181b)
 
 ## Overview
 
-`spz-progression` turns race results into progress, once per race on `SPZ:raceEnd`:
+Turns race results into progression: XP and levels, a safety rating, an iRating-style skill number and rank points that decide your rank tier. Also tracks rivals.
 
-| System | Role |
+## Features
+
+- XP and levels
+- Safety rating from incidents
+- iRating-style skill rating
+- Rank points and tiers
+- Rivals
+
+## Requirements
+
+| Resource | Type |
 |---|---|
-| **Rank Points (RP)** | The only thing that decides rank (`C-5` … `S-1`). One formula, any field size. Display/prestige only — nothing gates cars on it |
-| XP / level | Reward for playing |
-| Safety Rating | Display stat, daily caps enforced |
-| iRating | Display stat + rival matching, zero-sum pairwise Elo |
+| `ox_lib` | third-party |
+| `spz-core` | SPiceZ module |
+| `spz-identity` | SPiceZ module |
+| `spz-races` | SPiceZ module |
 
-Rank, SR, iRating and the top-3 count only move in **rated** races (2+ players). A solo
-race pays XP only. Full design: `Docs/ranking-design.md` and `Docs/report-v3/ranking-v3.pdf`.
+## Installation
 
-## Structure
+Included in the [txAdmin recipe](https://github.com/SPiceZ21/spz-txrecipe). Manual install:
 
-| Side | File | Purpose |
-|---|---|---|
-| Shared | `shared/init.lua` | Logger, notify helper |
-| Server | `config.lua` | `Config.Rules` (rank) + XP / SR / iRating tuning |
-| Server | `domain/rank.lua` | Pure: RP → rank string, class floor, progress |
-| Server | `domain/rp.lua` | Pure: the RP formula, class floor + daily cap |
-| Server | `domain/irating.lua` | Pure: zero-sum pairwise Elo |
-| Server | `domain/sr.lua` | Pure: SR delta + daily caps |
-| Server | `server/main.lua` | Race pipeline: map results, ledger, snapshot, compute, write, emit |
-| Server | `server/xp.lua` · `bonus.lua` | XP, levels, flat bonuses |
-| Server | `server/rank_admin.lua` | Flat RP (perfect lap, record), `/rank`, admin exports used by spz-admin's menu |
-| Server | `server/rivals.lua` | Rivals |
-| Tests | `tests/run.lua` · `pipeline_mock.lua` | Offline tests (`python tests/run_lupa.py [pipeline]`) |
+1. Download `spz-progression` from GitHub (latest release, or the repository) into your `resources` folder.
+2. Add to `server.cfg`, after its requirements:
 
-## Exports
+```cfg
+ensure spz-progression
+```
 
-| Group | Exports |
-|---|---|
-| XP | `CalculateXP` · `LevelFromXP` · `XPRequired` · `GrantBonus` |
-| Rank | `GrantFlatRP(src, rp, reason)` |
+## Configuration
 
-## Events
+- `config.lua`
 
-| Event | Emitter | Payload |
-|---|---|---|
-| `SPZ:progressionApplied` | `server/main.lua` | once per race: every player's before/after RP, rank, SR, iRating |
-| `SPZ:rankChanged` | `server/main.lua` | `src, oldRank, newRank, isPromotion` |
-| `SPZ:progressionUpdate` (client) | `server/main.lua` | post-race card data |
-| `SPZ:licenseUnlocked` | **spz-identity** `UnlockLicense` (single emitter) | class letter went up |
+See the file for every option.
 
 ## Commands
 
-| Command | Who | Purpose |
+| Command | Who | Description |
 |---|---|---|
-| `/rank` | everyone | your rank, RP, progress, streak |
-| `/rival` | everyone | your rival |
+| `/rank` | player | Show your rank |
+| `/rival` | player | Show your rival and the gap on your last track |
 
-There are **no admin commands**. Rank admin controls are in the admin menu (`spz-admin`,
-`/admin`): **Ranking** on the main page (overview, top 10, recent races → void a race) and
-**Players → player → Rank** (RP card, set rank points, that player's recent races → void).
-spz-admin checks the admin ace on every callback and audit-logs set/void actions. They call
-these exports: `AdminRankInfo` · `AdminSetRP` · `AdminRecentRaces` · `AdminVoidRace` ·
-`AdminRankStats`.
+## Exports
 
-There is no season reset.
+| Export | Side |
+|---|---|
+| `AdminRankInfo` | server |
+| `AdminRankStats` | server |
+| `AdminRecentRaces` | server |
+| `AdminSetRP` | server |
+| `AdminVoidRace` | server |
+| `CalculateXP` | server |
+| `GrantBonus` | server |
+| `GrantFlatRP` | server |
+| `LevelFromXP` | server |
+| `XPRequired` | server |
 
-## Database
-
-Migration `038_rank_points.sql` (spz-core) adds `rank_points`, `rank_streak`, `rp_day_gain`,
-`rp_day_key` to `players`, creates `rank_awards`, and backfills RP from each player's current
-class.
-
-## Dependencies
-
-`ox_lib` · `spz-core` · `spz-identity` · `spz-races`
+```lua
+exports["spz-progression"]:AdminRankInfo(...)
+```
 
 ---
 
-Part of [SPiceZ-Core](../README.md) · GPL-3.0
+Part of **SPiceZ-Core** — [documentation](https://github.com/SPiceZ21/Docs) · [all modules](https://github.com/SPiceZ21/Docs/blob/main/modules/README.md)
