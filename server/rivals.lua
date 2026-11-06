@@ -37,9 +37,9 @@ local function notify(src, title, msg, ntype)
 end
 
 local function discord(title, msg, fields)
-    if GetResourceState("spz-log") ~= "started" then return end
+    if GetResourceState("spz-discord") ~= "started" then return end
     pcall(function()
-        exports["spz-log"]:Success("race", title, msg, fields)
+        exports["spz-discord"]:Success("race", title, msg, fields)
     end)
 end
 
